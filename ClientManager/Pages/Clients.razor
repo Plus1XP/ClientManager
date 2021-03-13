@@ -1,0 +1,163 @@
+@page "/clients"
+@inject HttpClient httpClient
+
+<h1>Clients</h1>
+
+<p>This component demonstrates fetching data from the server.</p>
+
+@if (clients == null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <button @onclick="@Add" class="btn btn-success">Add</button>
+
+    <table class="table table-hover">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Name</th>
+                <th>Address</th>
+                <th>Support Type</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var client in clients)
+            {
+                <tr>
+                    <td>@client.ClientId</td>
+                    <td>@client.Name</td>
+                    <td>@client.Address</td>
+                    <td>@client.support</td>
+                    <td><a class="btn btn-success btn-sm" @onclick="@(() => ShowEdit(client.ClientId))">edit</a></td>
+                    <td><a class="btn btn-danger btn-sm" @onclick="@(() => ShowDelete(client.ClientId))">del</a></td>
+
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@if (clients != null && mode == MODE.Add)
+{
+    <EditForm Model="@client" OnValidSubmit="@HandleAdd">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+
+        <InputText placeholder="Company Name" id="Name" @bind-Value="@client.Name" />
+        <br />
+        <InputText placeholder="Company Address" id="Address" @bind-Value="@client.Address" />
+        <br />
+        <button type="submit">Submit</button>
+    </EditForm>
+
+    @code {
+        private ClientLibrary.Models.Client client = new ClientLibrary.Models.Client();
+
+        private async void HandleAdd()
+        {
+            string endpoint = $"{baseUrl}api/clients";
+            client.ClientId = Guid.NewGuid().ToString();
+            await httpClient.SendJsonAsync(HttpMethod.Post, endpoint, client);
+            await load();
+        }
+    }
+}
+
+@if (clients != null && mode == MODE.Edit)
+{
+    <EditForm Model="@client" OnValidSubmit="@HandleUpdate">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+
+        <InputText placeholder="Company Name" id="Name" @bind-Value="@client.Name" />
+        <br />
+        <InputText placeholder="Company Address" id="Address" @bind-Value="@client.Address" />
+        <br />
+        <button type="submit" class="btn btn-success">Submit</button>
+
+        @code {
+
+            private async void HandleUpdate()
+            {
+                string endpoint = $"{baseUrl}api/clients/{client.ClientId}";
+                await httpClient.SendJsonAsync(HttpMethod.Put, endpoint, client);
+                await load();
+                mode = MODE.None;
+            }
+        }
+    </EditForm>
+}
+
+@if (clients != null && mode == MODE.Delete)
+{
+    <EditForm Model="@client" OnValidSubmit="@HandleDelete">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+
+        <InputText placeholder="Company Name" id="Name" @bind-Value="@client.Name" />
+        <br />
+        <InputText placeholder="Company Address" id="Address" @bind-Value="@client.Address" />
+        <br />
+        <button type="submit" value="Delete" class="btn btn-danger">Submit</button>
+
+        @code {
+
+            private async void HandleDelete()
+            {
+                string endpoint = $"{baseUrl}api/clients/{client.ClientId}";
+                await httpClient.SendJsonAsync(HttpMethod.Delete, endpoint, null);
+                await load();
+                mode = MODE.None;
+            }
+        }
+    </EditForm>
+}
+
+
+
+@functions {
+    private ClientLibrary.Models.Client[] clients;
+    string baseUrl = "https://localhost:44368/";
+
+    private enum MODE { None, Add, Edit, Delete };
+    MODE mode = MODE.None;
+
+    private ClientLibrary.Models.Client c;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await load();
+    }
+
+    protected async Task load()
+    {
+        clients = await httpClient.GetFromJsonAsync<ClientLibrary.Models.Client[]>($"{baseUrl}api/clients");
+    }
+
+    protected void Add()
+    {
+        mode = MODE.Add;
+    }
+
+    protected async Task ShowEdit(string id)
+    {
+        c = await httpClient.GetJsonAsync<ClientLibrary.Models.Client>($"{baseUrl}api/clients/{id}");
+        client.ClientId = c.ClientId;
+        client.Name = c.Name;
+        client.Address = c.Address;
+        client.support = c.support;
+        mode = MODE.Edit;
+    }
+
+    protected async Task ShowDelete(string id)
+    {
+        c = await httpClient.GetJsonAsync<ClientLibrary.Models.Client>($"{baseUrl}api/clients/{id}");
+        client.ClientId = c.ClientId;
+        client.Name = c.Name;
+        client.Address = c.Address;
+        client.support = c.support;
+        mode = MODE.Delete;
+    }
+}
